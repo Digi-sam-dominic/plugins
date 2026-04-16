@@ -1,10 +1,17 @@
 import { WebPlugin } from '@capacitor/core';
 
-import type { DecryptBundlePlugin } from './definitions';
+import type {
+  DecryptBundleOptions,
+  DecryptBundlePlugin,
+  DecryptBundleResult,
+} from './definitions';
 
 export class DecryptBundleWeb extends WebPlugin implements DecryptBundlePlugin {
-  async echo(options: { value: string }): Promise<{ value: string }> {
-    console.log('ECHO', options);
-    return options;
+  async decrypt(
+    _options: DecryptBundleOptions,
+  ): Promise<DecryptBundleResult> {
+    throw this.unimplemented(
+      'DecryptBundle.decrypt is only available on Android and iOS.',
+    );
   }
 }

@@ -24,9 +24,50 @@ npx cap sync
 
 ## API
 
-<docgen-index></docgen-index>
+<docgen-index>
+
+* [`decrypt(...)`](#decrypt)
+* [Interfaces](#interfaces)
+
+</docgen-index>
 
 <docgen-api>
-<!-- run docgen to generate docs from the source -->
-<!-- More info: https://github.com/ionic-team/capacitor-docgen -->
+<!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
+
+### decrypt(...)
+
+```typescript
+decrypt(options: DecryptBundleOptions) => Promise<DecryptBundleResult>
+```
+
+| Param         | Type                                                                  |
+| ------------- | --------------------------------------------------------------------- |
+| **`options`** | <code><a href="#decryptbundleoptions">DecryptBundleOptions</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#decryptbundleresult">DecryptBundleResult</a>&gt;</code>
+
+--------------------
+
+
+### Interfaces
+
+
+#### DecryptBundleResult
+
+| Prop       | Type                |
+| ---------- | ------------------- |
+| **`path`** | <code>string</code> |
+
+
+#### DecryptBundleOptions
+
+| Prop               | Type                |
+| ------------------ | ------------------- |
+| **`assessmentId`** | <code>string</code> |
+| **`cek`**          | <code>string</code> |
+| **`iv`**           | <code>string</code> |
+| **`tag`**          | <code>string</code> |
+| **`examId`**       | <code>string</code> |
+| **`sessionId`**    | <code>string</code> |
+
 </docgen-api>
