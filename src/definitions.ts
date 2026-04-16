@@ -8,6 +8,7 @@ export interface DecryptBundleOptions {
 }
 
 export interface DecryptBundleResult {
+  /** Relative to `Directory.Data` (Android files dir, iOS Documents) for `@capacitor/filesystem`. */
   path: string;
 }
 

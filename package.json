@@ -1,6 +1,6 @@
 {
   "name": "@cap/decrypt-bundle",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Native plugin to securely decrypt encrypted exam bundles and return local file paths for rendering.",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
