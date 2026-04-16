@@ -1,6 +1,6 @@
 import Foundation
 import Capacitor
-import CommonCrypto
+import CryptoKit
 import ZIPFoundation
 
 @objc(DecryptBundlePlugin)
@@ -135,78 +135,16 @@ final class DecryptBundleFileDecryptor {
             throw DecryptBundleError("Corrupted EXB payload")
         }
 
-        fileManager.createFile(atPath: outputURL.path, contents: nil)
-        let output = try FileHandle(forWritingTo: outputURL)
-        defer { try? output.close() }
-
-        var cryptor: CCCryptorRef?
-        let createStatus = request.cek.withUnsafeBytes { keyBuf -> CCCryptorStatus in
-            CCCryptorCreateWithMode(
-                CCOperation(kCCDecrypt),
-                CCMode(kCCModeGCM),
-                CCAlgorithm(kCCAlgorithmAES),
-                CCPadding(ccNoPadding),
-                nil,
-                keyBuf.baseAddress,
-                request.cek.count,
-                nil,
-                0,
-                0,
-                CCModeOptions(0),
-                &cryptor
-            )
-        }
-        try Self.check(createStatus, "Unable to initialize AES-GCM")
-
-        guard let cryptorRef = cryptor else {
-            throw DecryptBundleError("Unable to initialize AES-GCM")
-        }
-
-        defer {
-            CCCryptorRelease(cryptorRef)
-        }
-
-        let ivStatus = request.iv.withUnsafeBytes { ivBuf in
-            CCCryptorGCMAddIV(cryptorRef, ivBuf.baseAddress, request.iv.count)
-        }
-        try Self.check(ivStatus, "Unable to configure IV")
-
+        // Ciphertext in EXB excludes trailing tag bytes; auth tag is supplied separately (same as Android Cipher).
+        let ciphertext = try readExactly(from: input, count: Int(cipherSize))
         let aad = Data("\(request.examId)|\(request.sessionId)|bundle".utf8)
-        let aadStatus = aad.withUnsafeBytes { aadBuf in
-            CCCryptorGCMAddAAD(cryptorRef, aadBuf.baseAddress, aad.count)
-        }
-        try Self.check(aadStatus, "Unable to configure AAD")
 
-        var processed: UInt64 = 0
-        let chunkSize = 64 * 1024
-        var plaintextBuffer = Data(count: chunkSize)
+        let symmetricKey = SymmetricKey(data: request.cek)
+        let nonce = try AES.GCM.Nonce(data: request.iv)
+        let sealedBox = try AES.GCM.SealedBox(nonce: nonce, ciphertext: ciphertext, tag: request.tag)
+        let plaintext = try AES.GCM.open(sealedBox, using: symmetricKey, authenticating: aad)
 
-        while processed < cipherSize {
-            let remaining = cipherSize - processed
-            let toRead = Int(min(UInt64(chunkSize), remaining))
-            let chunk = try readExactly(from: input, count: toRead)
-
-            let decryptStatus: CCCryptorStatus = chunk.withUnsafeBytes { inBuf in
-                plaintextBuffer.withUnsafeMutableBytes { outBuf in
-                    CCCryptorGCMDecrypt(
-                        cryptorRef,
-                        inBuf.baseAddress,
-                        chunk.count,
-                        outBuf.baseAddress
-                    )
-                }
-            }
-            try Self.check(decryptStatus, "Decrypt update failed")
-            try output.write(contentsOf: plaintextBuffer.prefix(chunk.count))
-
-            processed += UInt64(chunk.count)
-        }
-
-        var tagLength = size_t(request.tag.count)
-        let finalStatus = request.tag.withUnsafeBytes { tagBuf in
-            CCCryptorGCMFinal(cryptorRef, tagBuf.baseAddress, &tagLength)
-        }
-        try Self.check(finalStatus, "Authentication tag verification failed")
+        try plaintext.write(to: outputURL, options: .atomic)
 
         return outputURL
     }
@@ -327,12 +265,6 @@ final class DecryptBundleFileDecryptor {
             Int(prefix[7]) << 24
 
         return headerLength
-    }
-
-    private static func check(_ status: CCCryptorStatus, _ message: String) throws {
-        guard status == kCCSuccess else {
-            throw DecryptBundleError("\(message) (status \(status))")
-        }
     }
 
     private static let headerPrefixLength = 8
